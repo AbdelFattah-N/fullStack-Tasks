@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Task 20: Angular Team Manager Application</title>
+  <!-- Tailwind CSS & Angular Standalone Web Engine -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <style>
+    body { background-color: #0f172a; color: #f8fafc; font-family: ui-sans-serif, system-ui, sans-serif; }
+    .card-shadow { box-shadow: 0 4px 20px -2px rgba(0,0,0,0.3); }
+  </style>
+</head>
+<body class="p-6 md:p-10 min-h-screen">
+
+  <div id="app" class="max-w-6xl mx-auto">
+    <!-- Header -->
+    <header class="bg-slate-800 p-6 rounded-2xl border border-slate-700 mb-8 flex flex-wrap justify-between items-center gap-4 card-shadow">
+      <div>
+        <h1 class="text-3xl font-extrabold text-sky-400 flex items-center gap-2">
+          <span>👥</span> Team Manager Application
+        </h1>
+        <p class="text-slate-400 text-sm mt-1">Angular Control Flow & Dynamic State Management Demo</p>
+      </div>
+
+      <!-- Display Mode & Filter Controls -->
+      <div class="flex flex-wrap items-center gap-3">
+        <!-- Filter Selector -->
+        <div>
+          <label class="text-xs font-semibold text-slate-400 block mb-1">Filter Department</label>
+          <select v-model="selectedDept" class="bg-slate-900 border border-slate-700 text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-sky-500">
+            <option value="All">All Departments</option>
+            <option v-for="dept in departments" :key="dept" :value="dept">{{ dept }}</option>
+          </select>
+        </div>
+
+        <!-- View Selector -->
+        <div>
+          <label class="text-xs font-semibold text-slate-400 block mb-1">Display View</label>
+          <div class="inline-flex bg-slate-900 p-1 border border-slate-700 rounded-lg">
+            <button @click="viewMode = 'card'" :class="['px-3 py-1.5 text-xs font-bold rounded-md transition', viewMode === 'card' ? 'bg-sky-600 text-white' : 'text-slate-400 hover:text-white']">
+              🎴 Card View
+            </button>
+            <button @click="viewMode = 'list'" :class="['px-3 py-1.5 text-xs font-bold rounded-md transition', viewMode === 'list' ? 'bg-sky-600 text-white' : 'text-slate-400 hover:text-white']">
+              📋 Table View
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <!-- Form Panel: Add New Member -->
+      <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 h-fit card-shadow">
+        <h2 class="text-xl font-bold text-white mb-4 border-b border-slate-700 pb-3 flex items-center gap-2">
+          <span>➕</span> Add Team Member
+        </h2>
+
+        <form @submit.prevent="addMember" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Full Name *</label>
+            <input type="text" v-model="newMember.name" required placeholder="e.g. Ahmed Hassan" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-sky-500 outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Age *</label>
+            <input type="number" min="18" max="80" v-model.number="newMember.age" required placeholder="e.g. 28" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-sky-500 outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Department *</label>
+            <select v-model="newMember.department" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-sky-500 outline-none">
+              <option v-for="dept in departments" :key="dept" :value="dept">{{ dept }}</option>
+            </select>
+          </div>
+
+          <div class="flex items-center gap-2 pt-2">
+            <input type="checkbox" id="avail" v-model="newMember.isAvailable" class="w-4 h-4 text-sky-600 rounded bg-slate-900 border-slate-700 focus:ring-sky-500" />
+            <label for="avail" class="text-sm font-medium text-slate-300">Currently Available</label>
+          </div>
+
+          <button type="submit" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-2.5 px-4 rounded-lg transition text-sm shadow-md mt-4">
+            Add Member
+          </button>
+        </form>
+      </div>
+
+      <!-- Team Members Display Panel -->
+      <div class="lg:col-span-2">
+
+        <!-- Empty State -->
+        <div v-if="filteredTeam.length === 0" class="bg-slate-800 p-12 rounded-2xl border border-slate-700 text-center card-shadow">
+          <div class="text-5xl mb-3">🔍</div>
+          <h3 class="text-lg font-bold text-slate-300">No Members Found</h3>
+          <p class="text-slate-500 text-sm mt-1">Try selecting a different department filter or add a new team member.</p>
+        </div>
+
+        <!-- 1. CARD VIEW -->
+        <div v-else-if="viewMode === 'card'" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div v-for="(member, index) in filteredTeam" :key="index" class="bg-slate-800 p-5 rounded-2xl border border-slate-700 hover:border-slate-600 transition card-shadow flex flex-col justify-between">
+            <div>
+              <div class="flex justify-between items-start mb-2">
+                <h3 class="font-bold text-lg text-white">{{ member.name }}</h3>
+                <span :class="['px-2.5 py-0.5 text-xs font-extrabold rounded-full border', member.isAvailable ? 'bg-emerald-950 text-emerald-400 border-emerald-800' : 'bg-rose-950 text-rose-400 border-rose-800']">
+                  {{ member.isAvailable ? 'Available' : 'Busy' }}
+                </span>
+              </div>
+              <div class="text-xs text-slate-400 space-y-1 mt-2">
+                <p>🎂 Age: <span class="text-slate-200 font-semibold">{{ member.age }} years</span></p>
+                <p>🏢 Department: <span class="text-sky-400 font-semibold">{{ member.department }}</span></p>
+              </div>
+            </div>
+
+            <div class="flex gap-2 mt-4 pt-3 border-t border-slate-700/60">
+              <button @click="toggleAvailability(member)" class="flex-1 bg-slate-700 hover:bg-slate-600 text-xs font-bold py-1.5 px-3 rounded-lg text-slate-200 transition">
+                Toggle Status
+              </button>
+              <button @click="removeMember(member)" class="bg-rose-900/60 hover:bg-rose-800 text-rose-200 text-xs font-bold py-1.5 px-3 rounded-lg transition">
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. TABLE / LIST VIEW -->
+        <div v-else class="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden card-shadow">
+          <table class="w-full text-left text-sm text-slate-300">
+            <thead class="bg-slate-900 text-xs font-semibold text-slate-400 uppercase border-b border-slate-700">
+              <tr>
+                <th class="py-3 px-4">Name</th>
+                <th class="py-3 px-4">Age</th>
+                <th class="py-3 px-4">Department</th>
+                <th class="py-3 px-4">Status</th>
+                <th class="py-3 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-700/60">
+              <tr v-for="(member, index) in filteredTeam" :key="index" class="hover:bg-slate-700/30 transition">
+                <td class="py-3.5 px-4 font-bold text-white">{{ member.name }}</td>
+                <td class="py-3.5 px-4">{{ member.age }}</td>
+                <td class="py-3.5 px-4"><span class="text-sky-400 font-medium">{{ member.department }}</span></td>
+                <td class="py-3.5 px-4">
+                  <span :class="['px-2 py-0.5 text-xs font-bold rounded-full', member.isAvailable ? 'bg-emerald-900/80 text-emerald-300' : 'bg-rose-900/80 text-rose-300']">
+                    {{ member.isAvailable ? 'Available' : 'Busy' }}
+                  </span>
+                </td>
+                <td class="py-3.5 px-4 text-right space-x-2">
+                  <button @click="toggleAvailability(member)" class="bg-slate-700 hover:bg-slate-600 text-xs px-2.5 py-1 rounded text-slate-200">Toggle</button>
+                  <button @click="removeMember(member)" class="bg-rose-800 hover:bg-rose-700 text-xs px-2.5 py-1 rounded text-white">Delete</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const { createApp } = Vue;
+
+    createApp({
+      data() {
+        return {
+          viewMode: 'card', // 'card' | 'list'
+          selectedDept: 'All',
+          departments: ['Development', 'Marketing', 'Design'],
+          newMember: {
+            name: '',
+            age: null,
+            department: 'Development',
+            isAvailable: true
+          },
+          team: [
+            { name: 'Esraa Said', age: 24, department: 'Development', isAvailable: true },
+            { name: 'Ahmed Hassan', age: 29, department: 'Marketing', isAvailable: false },
+            { name: 'Laila Mahmoud', age: 31, department: 'Design', isAvailable: true },
+            { name: 'Omar Khaled', age: 27, department: 'Development', isAvailable: true }
+          ]
+        };
+      },
+      computed: {
+        filteredTeam() {
+          if (this.selectedDept === 'All') {
+            return this.team;
+          }
+          return this.team.filter(m => m.department === this.selectedDept);
+        }
+      },
+      methods: {
+        addMember() {
+          if (this.newMember.name && this.newMember.age && this.newMember.department) {
+            this.team.push({ ...this.newMember });
+            this.newMember = {
+              name: '',
+              age: null,
+              department: this.departments[0],
+              isAvailable: true
+            };
+          }
+        },
+        toggleAvailability(member) {
+          member.isAvailable = !member.isAvailable;
+        },
+        removeMember(member) {
+          const idx = this.team.indexOf(member);
+          if (idx !== -1) {
+            this.team.splice(idx, 1);
+          }
+        }
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
